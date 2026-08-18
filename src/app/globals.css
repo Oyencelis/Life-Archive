@@ -1,0 +1,2941 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* Without this the browser falls back to the OS's default scrollbar,
+   which stays light/white regardless of the active theme — jarring
+   against a dark theme. Themed via --color-* so it follows the theme
+   switcher like everything else. */
+html {
+  scrollbar-color: var(--color-ink-faint) var(--color-bg-sunk);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-sunk);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-faint);
+  border-radius: 999px;
+  border: 3px solid var(--color-bg-sunk);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-soft);
+}
+
+body {
+  /* --nav-* is just a distinctly-named alias for the theme's own
+     --color-* / --font-* tokens (see the .ed-shell comment further down for
+     why aliasing this way is safe) — declared here, globally, so every
+     piece of persistent chrome that sits outside any page's own .ed-shell
+     (the nav bar, its search panel, the floating ask-bubble in the bottom
+     corner) can share the SAME live theme, not just descendants of
+     .app-nav. It follows the active theme the same as everything else on
+     body. */
+  --nav-paper: var(--color-bg-raised);
+  --nav-paper-raised: var(--color-bg-raised);
+  --nav-sunk: var(--color-bg-sunk);
+  --nav-line: var(--color-line);
+  --nav-ink: var(--color-ink);
+  --nav-ink-soft: var(--color-ink-soft);
+  --nav-ink-faint: var(--color-ink-faint);
+  --nav-accent: var(--color-accent);
+  --nav-accent-ink: var(--color-accent-ink);
+  --nav-font-display: var(--font-display);
+  --nav-font-mono: var(--font-mono);
+
+  margin: 0;
+  background: var(--color-bg);
+  background-image: radial-gradient(
+    ellipse 900px 500px at 15% -10%,
+    var(--color-accent-soft),
+    transparent 60%
+  );
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  font-size: calc(16px * var(--type-scale, 1));
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin: 0 0 0.4em;
+  text-wrap: balance;
+}
+
+p {
+  color: var(--color-ink-soft);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------- nav */
+
+/* Nav is the one piece of chrome visible on every single page, so it
+   carries the same fixed "personal museum" identity as .ed-shell
+   (paper/terracotta, serif brand mark) rather than following whatever
+   site theme is active — same reasoning as .ed-shell itself. The
+   --nav-* variables it reads are declared on body (see there for why:
+   the ask-bubble and search panel need them too, and they aren't both
+   descendants of .app-nav). */
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--nav-line);
+  background: color-mix(in srgb, var(--nav-paper-raised) 82%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (max-width: 640px) {
+  .app-nav {
+    padding: 14px 18px;
+  }
+}
+
+.app-nav-mark {
+  font-family: var(--nav-font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+  margin-right: 4px;
+  position: relative;
+  color: var(--nav-ink);
+}
+
+.app-nav-mark::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  background: var(--nav-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s var(--motion-easing, ease-out);
+}
+
+.app-nav-mark:hover::after {
+  transform: scaleX(1);
+}
+
+.nav-root {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  gap: 16px;
+  /* No position:relative here on purpose — .nav-mobile-panel needs to anchor
+     to .app-nav (full-width, already position:sticky) so it spans the whole
+     bar. If this box were positioned, the panel would anchor to it instead
+     and only cover the width after the logo. */
+}
+
+.nav-groups {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 880px) {
+  .nav-groups {
+    display: none;
+  }
+}
+
+.nav-group {
+  position: relative;
+}
+
+.nav-group-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--nav-ink-soft);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.nav-group-trigger:hover,
+.nav-group-trigger[aria-expanded="true"] {
+  background: var(--nav-sunk);
+  color: var(--nav-ink);
+}
+
+.nav-group-trigger[aria-current="true"] {
+  color: var(--nav-accent);
+}
+
+.nav-mobile-group-label[aria-current="true"] {
+  color: var(--nav-accent);
+}
+
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--nav-paper-raised);
+  border: 1px solid var(--nav-line);
+  border-radius: 4px;
+  box-shadow: 0 20px 44px -24px rgba(36, 26, 17, 0.4);
+}
+
+.nav-dropdown-right {
+  left: auto;
+  right: 0;
+  min-width: 190px;
+}
+
+.nav-dropdown a {
+  font-size: 13.5px;
+  color: var(--nav-ink-soft);
+  padding: 8px 10px;
+  border-radius: 2px;
+}
+
+.nav-dropdown a:hover {
+  background: var(--nav-sunk);
+  color: var(--nav-ink);
+}
+
+.nav-user-name {
+  font-size: 12px;
+  color: var(--nav-ink-faint);
+  padding: 4px 10px 8px;
+  margin: 0 0 4px;
+  border-bottom: 1px solid var(--nav-line);
+}
+
+.nav-signout {
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 13.5px;
+  color: var(--nav-ink-soft);
+  padding: 8px 10px;
+  border-radius: 2px;
+}
+
+.nav-signout:hover {
+  background: var(--nav-sunk);
+  color: var(--nav-ink);
+}
+
+.nav-utility {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* .nav-root uses justify-content: space-between to split .nav-groups and
+     .nav-utility apart, but .nav-groups is display:none below 880px —
+     with only one flex child left, space-between collapses it to the
+     start of the row instead of the end (the bug this fixes). This keeps
+     search/avatar/menu pinned right regardless of whether .nav-groups is
+     present. */
+  margin-left: auto;
+}
+
+.nav-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: var(--nav-ink-soft);
+}
+
+.nav-icon-btn:hover {
+  background: var(--nav-sunk);
+  color: var(--nav-ink);
+}
+
+.nav-user {
+  position: relative;
+}
+
+.nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: var(--nav-accent);
+  color: var(--nav-accent-ink);
+  font-family: var(--nav-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+}
+
+.nav-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nav-mobile-toggle {
+  display: none;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: none;
+  background: none;
+  color: var(--nav-ink);
+}
+
+@media (max-width: 880px) {
+  .nav-mobile-toggle {
+    display: flex;
+  }
+}
+
+.nav-mobile-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 20px 22px;
+  background: var(--nav-paper-raised);
+  border-bottom: 1px solid var(--nav-line);
+  box-shadow: 0 16px 32px -16px rgba(36, 26, 17, 0.25);
+  overflow: hidden;
+}
+
+.nav-mobile-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-mobile-group-label {
+  font-family: var(--nav-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nav-ink-faint);
+  margin: 0 0 6px;
+}
+
+.nav-mobile-group a {
+  font-size: 15px;
+  color: var(--nav-ink);
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--nav-line);
+}
+
+/* ---------------------------------------------------------------- search overlay */
+
+.search-overlay-root {
+  position: relative;
+}
+
+.search-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(380px, calc(100vw - 44px));
+  max-height: min(480px, calc(100vh - 140px));
+  display: flex;
+  flex-direction: column;
+  background: var(--nav-paper-raised);
+  border: 1px solid var(--nav-line);
+  border-radius: 8px;
+  box-shadow: 0 20px 44px -24px rgba(36, 26, 17, 0.4);
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  /* .search-overlay-root sits wherever the icon falls in the nav row, not
+     at the screen edge — anchoring the panel to it (like desktop does)
+     runs it off the left side of a narrow viewport. Anchor to the
+     viewport instead. */
+  .search-panel {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
+.search-panel-input {
+  flex: none;
+  border: none;
+  border-bottom: 1px solid var(--nav-line);
+  padding: 14px 16px;
+  font-size: 14px;
+  background: transparent;
+  color: var(--nav-ink);
+  outline: none;
+}
+
+.search-panel-results {
+  overflow-y: auto;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-panel-result {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: 2px;
+  font-size: 13.5px;
+  color: var(--nav-ink);
+}
+
+.search-panel-result:hover {
+  background: var(--nav-sunk);
+}
+
+/* ---------------------------------------------------------------- ask bubble */
+
+.ask-bubble-root {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.ask-bubble {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  border: none;
+  background: var(--nav-accent);
+  color: var(--nav-accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 14px 30px -10px rgba(36, 26, 17, 0.4);
+}
+
+.ask-panel {
+  width: min(380px, calc(100vw - 44px));
+  height: min(520px, calc(100vh - 140px));
+  padding: 18px 18px 14px;
+  background: var(--nav-paper-raised);
+  border: 1px solid var(--nav-line);
+  border-radius: 8px;
+  box-shadow: 0 20px 44px -24px rgba(36, 26, 17, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.ask-panel-eyebrow {
+  font-family: var(--nav-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nav-accent);
+  margin: 0 0 10px;
+  flex: none;
+}
+
+/* ---------------------------------------------------------------- ask chat */
+
+.ask-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 560px;
+  max-height: 70vh;
+}
+
+.ask-chat-compact {
+  flex: 1;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  gap: 10px;
+}
+
+.ask-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 2px;
+}
+
+.ask-chat-empty {
+  font-size: 13.5px;
+  color: var(--nav-ink-faint);
+  font-style: italic;
+}
+
+.ask-message {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: 6px;
+  font-size: 13.5px;
+}
+
+.ask-message p {
+  margin: 0;
+  color: inherit;
+}
+
+.ask-message-user {
+  align-self: flex-end;
+  background: var(--nav-accent);
+  color: var(--nav-accent-ink);
+}
+
+.ask-message-assistant {
+  align-self: flex-start;
+  background: var(--nav-sunk);
+  color: var(--nav-ink);
+}
+
+.ask-message-error {
+  background: transparent;
+  border: 1px dashed var(--nav-line);
+  color: var(--nav-ink-faint);
+}
+
+.ask-message-pending {
+  font-style: italic;
+  color: var(--nav-ink-faint);
+}
+
+.ask-message-note {
+  margin: 6px 0 0 !important;
+  font-size: 11.5px !important;
+  color: var(--nav-ink-faint) !important;
+  font-style: italic;
+}
+
+.ask-citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ask-chat-input {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+
+.ask-chat-input input {
+  flex: 1;
+  border: 1px solid var(--nav-line);
+  border-radius: 4px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  background: var(--nav-paper);
+  color: var(--nav-ink);
+  font-family: inherit;
+}
+
+/* ---------------------------------------------------------------- body/page */
+
+.app-body {
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 48px 32px 120px;
+}
+
+@media (max-width: 640px) {
+  .app-body {
+    padding: 32px 18px 100px;
+  }
+}
+
+/* ---------------------------------------------------------------- editorial */
+/* Shared primitives for the app's "editorial" pages (Home, Timeline, list
+   pages, detail pages) — the personal-museum vocabulary (--paper, --ink,
+   --terracotta, ed-* classes) layered on top of the live theme tokens
+   (--color-*, --font-*, --surface-*, set at :root by the theme provider —
+   see src/lib/theme/css-vars.ts) rather than hardcoded, so switching
+   themes in Settings repaints these pages the same way it does every
+   other route. This WAS briefly a fixed, theme-independent palette; that
+   made every editorial page go flat generic dark-blue the moment someone
+   picked a dark theme preset (their own color choice got ignored), which
+   the user explicitly asked to undo — back to theme-reactive.
+
+   Mint and yellow are the one deliberate exception: fixed category-coding
+   swatches for the Event/Person/Place/Memory/Journal tone tags (see
+   .ed-tone-*), not brand color — always paired with the fixed --ink-fixed
+   text so they stay legible no matter which theme is active.
+
+   These live here as plain global classes — not CSS Modules `composes` —
+   because Turbopack's CSS Modules support doesn't reliably pull in rules
+   composed from a file that's never directly imported by a .tsx (see
+   node_modules/next/dist/docs/.../08-turbopack.md, "Unsupported and
+   unplanned features"). A page-specific .module.css combines these ed-*
+   classnames with its own local classes, same as the rest of the app
+   already does with classes like "btn" or "record-row".
+
+   Each editorial page's root element needs the "ed-shell" class both for
+   these tokens and to opt into the wide, full-bleed layout below. */
+
+/* IMPORTANT: alias in ONE direction only — these vars read FROM --color-*
+   (already set at :root by the theme provider), never the reverse.
+   Declaring --color-bg: var(--paper) here too would make both resolve to
+   nothing at compute time (a real bug that hit this file once already).
+   --font-*, --surface-*, --type-scale, --motion-* are deliberately NOT
+   redeclared here — they already cascade down from :root, so leaving them
+   alone is what makes this page follow the theme's typography, card
+   style, and motion feel too, not just its colors. */
+.ed-shell {
+  --paper: var(--color-bg);
+  --paper-raised: var(--color-bg-raised);
+  --paper-line: var(--color-line);
+  --ink: var(--color-ink);
+  --ink-soft: var(--color-ink-soft);
+  --ink-faint: var(--color-ink-faint);
+  --ink-fixed: #211508;
+  --terracotta: var(--color-accent);
+  --terracotta-ink: var(--color-accent-ink);
+  --mint: #93e2ce;
+  --yellow: #eec24c;
+  --shadow-soft: 0 20px 44px -24px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 30px 54px -22px rgba(0, 0, 0, 0.5);
+  --ease: var(--motion-easing, cubic-bezier(0.16, 1, 0.3, 1));
+
+  display: flex;
+  flex-direction: column;
+  gap: clamp(48px, 6vw, 88px);
+  padding: clamp(24px, 3.4vw, 56px) clamp(20px, 4.2vw, 64px) 0;
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+/* Editorial refinements for existing global components when they render
+   inside an .ed-shell page (record lists, empty states, forms) — small,
+   additive touches layered on top of the variable overrides above. */
+
+.ed-shell .record-row-title {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+}
+
+.ed-shell .record-row-meta {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ed-shell .record-row {
+  border-bottom-color: var(--paper-line);
+}
+
+.ed-shell .empty-state {
+  background: var(--paper-raised);
+  border-color: var(--terracotta);
+  padding: clamp(40px, 5vw, 64px) clamp(28px, 4vw, 44px);
+}
+
+.ed-shell .empty-state h2 {
+  font-size: clamp(22px, 2.4vw, 28px);
+}
+
+.ed-shell .btn-primary {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+
+.ed-shell .btn {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.ed-shell .btn-ghost {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* :where() zeroes this rule's specificity out entirely, so it acts as a
+   true low-priority default (plain, otherwise-unstyled links inherit
+   surrounding text color) that any component's own color rule can win
+   against. Written as a plain ".ed-shell a" selector, this had specificity
+   (0,1,1) — enough to silently beat single-class component rules like
+   ".fieldNote { color: var(--terracotta-ink) }" (0,1,0) whenever that
+   component rendered as an <a>, which is exactly what was happening: the
+   field-note card (and anything else styled-as-a-link) was falling back
+   to the page's base ink color instead of its own intended contrasting
+   color — invisible in themes where the two happen to be close, glaringly
+   broken in themes (like Terminal) where they're not. */
+:where(.ed-shell a) {
+  color: inherit;
+}
+
+.ed-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin: 0 0 22px;
+}
+
+.ed-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--terracotta);
+  flex: none;
+}
+
+.ed-eyebrow-small {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin: 0 0 10px;
+}
+
+/* -------------------------------------------------------- index page hero */
+/* The lighter-weight header pattern used by the "consistent template"
+   pages (People, Events, Memories, …) — eyebrow + serif heading +
+   description + primary action, sized down from Home/Timeline's
+   oversized hero since these pages lead with the record list, not the
+   headline. */
+
+.ed-index-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--paper-line);
+}
+
+.ed-index-heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(32px, 4.2vw, 52px);
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+.ed-index-meta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 6px;
+}
+
+.ed-headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--ink);
+  font-size: clamp(46px, 6.4vw, 92px);
+  line-height: 0.98;
+  letter-spacing: -0.01em;
+  margin: 0 0 24px;
+}
+
+.ed-headline em {
+  display: block;
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 600;
+}
+
+.ed-hero-desc {
+  font-size: clamp(15px, 1.1vw, 17px);
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 42ch;
+  margin: 0 0 28px;
+}
+
+.ed-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--terracotta-ink);
+  background: var(--terracotta);
+  border: none;
+  border-radius: 3px;
+  padding: 13px 20px;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.ed-cta-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-pop);
+}
+
+.ed-cta-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  position: relative;
+}
+
+.ed-cta-ghost::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 1.5px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.25s var(--ease);
+}
+
+.ed-cta-ghost:hover::before,
+.ed-cta-ghost:focus-visible::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.ed-tone-terracotta {
+  background: var(--terracotta);
+  color: var(--terracotta-ink);
+}
+
+.ed-tone-mint {
+  background: var(--mint);
+  color: var(--ink-fixed);
+}
+
+.ed-tone-yellow {
+  background: var(--yellow);
+  color: var(--ink-fixed);
+}
+
+.ed-tone-paper {
+  background: var(--paper-raised);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.ed-surprise-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 6px 2px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  position: relative;
+}
+
+.ed-surprise-btn::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 1.5px;
+  background: var(--terracotta);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.25s var(--ease);
+}
+
+.ed-surprise-btn:hover::before,
+.ed-surprise-btn:focus-visible::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.ed-surprise-btn::after {
+  content: "↗";
+  font-size: 14px;
+  transition: transform 0.25s var(--ease);
+}
+
+.ed-surprise-btn:hover::after,
+.ed-surprise-btn:focus-visible::after {
+  transform: translate(2px, -2px);
+}
+
+.ed-surprise-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ed-surprise-result {
+  margin-top: 16px;
+  max-width: 340px;
+  background: var(--paper-raised);
+  border: 1px solid var(--paper-line);
+  border-radius: 4px;
+  padding: 16px 18px;
+}
+
+.ed-surprise-result a {
+  color: var(--terracotta);
+}
+
+.ed-colophon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 22px clamp(20px, 4.2vw, 64px) 28px;
+  margin: 0 calc(-1 * clamp(20px, 4.2vw, 64px));
+  border-top: 1px solid var(--paper-line);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-cta-primary {
+    transition: none;
+  }
+
+  .ed-cta-primary:hover {
+    transform: none;
+  }
+}
+
+/* Editorial pages (paper/terracotta palette, tied to the active theme) and
+   other bespoke wide pages (fixed palette of their own, e.g. Settings'
+   dark control room) both need a wider stage than the narrow dashboard
+   column most pages use. ".ed-shell" carries the editorial color
+   variables too; ".wide-shell" is the color-neutral opt-in for a page
+   that wants the width without inheriting that palette. Either way, this
+   beats touching layout.tsx for every other route. */
+body:has(.ed-shell, .wide-shell) .app-body {
+  max-width: none;
+  padding: 0;
+}
+
+.page-header {
+  margin-bottom: 40px;
+  max-width: 62ch;
+}
+
+.page-header-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin: 0 0 10px;
+}
+
+.page-header h1 {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.page-header-desc {
+  font-size: 15px;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- empty state */
+
+.empty-state {
+  border: 1px dashed var(--color-line);
+  border-radius: var(--surface-radius);
+  padding: 48px 36px;
+  text-align: left;
+  max-width: 56ch;
+}
+
+.empty-state-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+  margin: 0 0 12px;
+}
+
+.empty-state h2 {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.empty-state-body {
+  font-size: 14.5px;
+  margin: 0 0 20px;
+}
+
+/* ---------------------------------------------------------------- record list */
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-line);
+}
+
+.record-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--color-line);
+  animation: rise 0.4s var(--motion-easing, ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--motion-stagger, 0.04s));
+}
+
+.record-row-editing {
+  align-items: flex-start;
+  padding: 16px 4px 20px;
+  background: var(--color-bg-sunk);
+}
+
+.reflection-card {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.badge-current {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.record-row-title {
+  font-weight: 600;
+  color: var(--color-ink);
+  transition: color 0.15s ease;
+}
+
+.record-row:hover .record-row-title {
+  color: var(--color-accent);
+}
+
+.record-row-meta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-faint);
+  white-space: nowrap;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.setup-form,
+.entity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setup-form label,
+.entity-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
+.setup-form input,
+.setup-form select,
+.setup-form textarea,
+.entity-form input,
+.entity-form select,
+.entity-form textarea {
+  border: 1px solid var(--color-line);
+  border-radius: calc(var(--surface-radius) - 2px);
+  padding: 10px 12px;
+  font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: inherit;
+}
+
+.setup-form textarea,
+.entity-form textarea {
+  resize: vertical;
+}
+
+.setup-error {
+  font-size: 13px;
+  color: #b3392c;
+  margin: 0;
+}
+
+.setup-form button[type="submit"] {
+  margin-top: 4px;
+  border: none;
+  border-radius: calc(var(--surface-radius) - 2px);
+  padding: 11px 16px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.15s ease;
+}
+
+.setup-form button[type="submit"]:hover {
+  opacity: 0.92;
+}
+
+.setup-form button:disabled,
+.entity-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- stats */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.stat-tile {
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  border-radius: var(--surface-radius);
+  padding: 16px 18px;
+  background: var(--color-bg-raised);
+  transition: border-color 0.15s ease;
+}
+
+.stat-tile:hover {
+  border-color: var(--color-accent);
+}
+
+.stat-tile-value {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile-label {
+  font-size: 12px;
+  color: var(--color-ink-faint);
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------- forms / actions */
+
+.section-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 560px) {
+  .section-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-toolbar > .record-row-actions {
+    justify-content: flex-end;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-line);
+  border-radius: calc(var(--surface-radius) - 2px);
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: var(--color-bg-raised);
+  color: var(--color-ink);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover {
+  border-color: var(--color-accent);
+}
+
+.btn-primary {
+  border: none;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.btn-primary:hover {
+  opacity: 0.92;
+}
+
+.btn-ghost {
+  border: none;
+  background: none;
+  padding: 6px 8px;
+  color: var(--color-ink-faint);
+  font-size: 12.5px;
+}
+
+.btn-ghost:hover {
+  color: var(--color-ink);
+}
+
+.btn-danger {
+  color: #b3392c;
+}
+
+.record-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.entity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 480px;
+}
+
+.entity-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 560px) {
+  .entity-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.entity-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------- place picker */
+
+.place-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.place-picker-results {
+  position: absolute;
+  top: 62px;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--color-bg-raised);
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  border-radius: calc(var(--surface-radius) + 2px);
+  box-shadow: var(--surface-shadow);
+}
+
+.place-picker-results button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--color-ink);
+  border-radius: calc(var(--surface-radius) - 2px);
+}
+
+.place-picker-results button:hover,
+.place-picker-results button:focus-visible {
+  background: var(--color-bg-sunk);
+}
+
+.place-picker-status {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--color-ink-faint);
+}
+
+.place-picker-map-wrap {
+  position: relative;
+}
+
+.place-picker-map {
+  height: 280px;
+  width: 100%;
+  border-radius: var(--surface-radius);
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  background: var(--color-bg-sunk);
+  /* Leaflet gives its container `position: relative` but no z-index, so
+     it never forms its own stacking context — its internal panes (tiles
+     at 200, markers at 600, controls at 1000) then compare directly
+     against .place-picker-results (z-index: 20) and win. Pinning a
+     z-index here contains all of that inside the map. */
+  position: relative;
+  z-index: 0;
+}
+
+.place-picker-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- media gallery */
+
+.media-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.media-filter-btn {
+  border: 1px solid var(--color-line);
+  background: var(--color-bg-raised);
+  color: var(--color-ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+}
+
+.media-filter-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.media-filter-btn[aria-selected="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.media-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.media-grid-item {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--surface-radius);
+  background: var(--color-bg-sunk);
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.media-grid-item:hover,
+.media-grid-item:focus-visible {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.media-grid-item img,
+.media-grid-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.media-grid-doc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-grid-item {
+    transition: none;
+  }
+
+  .media-grid-item:hover,
+  .media-grid-item:focus-visible {
+    transform: none;
+  }
+}
+
+.media-detail-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 50vh;
+  overflow: hidden;
+  border-radius: var(--surface-radius);
+  background: var(--color-bg-sunk);
+}
+
+.media-detail-preview img,
+.media-detail-preview video {
+  max-width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+}
+
+.media-detail-preview audio {
+  width: 100%;
+  margin: 24px;
+}
+
+.media-detail-preview a.btn {
+  margin: 40px;
+}
+
+/* ---------------------------------------------------------------- record groups */
+
+.record-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.record-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--color-ink);
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.record-group-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-ink-faint);
+}
+
+/* ---------------------------------------------------------------- record cards */
+
+.record-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 18px;
+}
+
+.record-card {
+  position: relative;
+  animation: rise 0.4s var(--motion-easing, ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--motion-stagger, 0.04s));
+}
+
+.record-card-link {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: var(--surface-radius);
+  overflow: hidden;
+  background: var(--color-bg-raised);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.record-card-link:hover,
+.record-card-link:focus-visible {
+  border-color: var(--color-accent);
+  transform: translateY(-3px);
+  box-shadow: var(--surface-shadow);
+}
+
+.record-card-media {
+  aspect-ratio: 4 / 3;
+  background: var(--color-bg-sunk);
+  overflow: hidden;
+  flex: none;
+}
+
+.record-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.record-card-media-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.record-card-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.record-card-title {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-card-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-ink-faint);
+}
+
+.record-card-delete-form {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
+.record-card-delete {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(20, 16, 12, 0.6);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.record-card-delete:hover,
+.record-card-delete:focus-visible {
+  opacity: 1;
+  background: #b3392c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record-card {
+    animation: none;
+  }
+
+  .record-card-link {
+    transition: none;
+  }
+
+  .record-card-link:hover {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- skeleton loading */
+
+@keyframes ed-shimmer {
+  0% {
+    background-position: -420px 0;
+  }
+  100% {
+    background-position: 420px 0;
+  }
+}
+
+.ed-skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-sunk) 25%,
+    var(--color-bg-raised) 37%,
+    var(--color-bg-sunk) 63%
+  );
+  background-size: 840px 100%;
+  animation: ed-shimmer 1.6s linear infinite;
+  border-radius: var(--surface-radius);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-skeleton {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+.ed-skeleton-eyebrow {
+  width: 90px;
+  height: 11px;
+  margin-bottom: 12px;
+}
+
+.ed-skeleton-heading {
+  width: min(340px, 60%);
+  height: 40px;
+  margin-bottom: 10px;
+}
+
+.ed-skeleton-desc {
+  width: min(480px, 80%);
+  height: 15px;
+}
+
+.ed-skeleton-cta {
+  width: 130px;
+  height: 38px;
+  border-radius: 999px;
+}
+
+.ed-skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.ed-skeleton-card {
+  aspect-ratio: 3 / 4;
+}
+
+.ed-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ed-skeleton-row {
+  height: 52px;
+  border-radius: 0;
+}
+
+.ed-skeleton-hero {
+  width: 100%;
+  min-height: clamp(220px, 30vw, 360px);
+  border-radius: 6px;
+}
+
+.ed-skeleton-fact {
+  height: 44px;
+  flex: 1 1 160px;
+}
+
+.ed-skeleton-line {
+  height: 15px;
+  margin-bottom: 10px;
+}
+
+@keyframes ed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ed-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-line);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: ed-spin 0.7s linear infinite;
+}
+
+.ed-spinner-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-spinner {
+    animation: none;
+    border-top-color: var(--color-line);
+  }
+}
+
+/* ---------------------------------------------------------------- tabs */
+
+.ed-tabs {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+
+.ed-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px;
+  margin-bottom: -1px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.ed-tab + .ed-tab {
+  margin-left: 22px;
+}
+
+.ed-tab:hover {
+  color: var(--color-ink);
+}
+
+.ed-tab-active {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-accent);
+}
+
+.ed-tab-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-bg-sunk);
+  color: var(--color-ink-faint);
+}
+
+.ed-tab-active .ed-tab-count {
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-bg));
+  color: var(--color-accent);
+}
+
+.ed-tab-panel[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-tab {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- reveal */
+
+.ed-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s var(--ease, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform 0.7s var(--ease, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.ed-reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- entity feature */
+/* Shared "magazine feature" detail-page layout — see EntityFeature.tsx.
+   Lives in .ed-shell scope, which is the app's fixed identity (not
+   theme-reactive — see the .ed-shell comment near the top of this file). */
+
+.ed-feature-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 20px;
+  transition: color 0.15s ease;
+}
+
+.ed-feature-back:hover {
+  color: var(--terracotta);
+}
+
+.ed-feature-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: clamp(220px, 30vw, 360px);
+  border-radius: 6px;
+  overflow: hidden;
+  animation: ed-feature-hero-in 0.6s var(--ease) both;
+}
+
+@keyframes ed-feature-hero-in {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ed-feature-hero-photo {
+  background: var(--paper-line);
+  color: #fff6ea;
+}
+
+.ed-feature-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: ed-feature-cover-in 1.1s var(--ease) both;
+}
+
+@keyframes ed-feature-cover-in {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.ed-feature-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(15, 10, 6, 0.85), rgba(15, 10, 6, 0) 62%);
+}
+
+.ed-feature-heading-block {
+  position: relative;
+  z-index: 1;
+  padding: clamp(20px, 3.2vw, 40px);
+  color: inherit;
+  max-width: 46ch;
+}
+
+.ed-feature-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.85;
+  margin: 0 0 10px;
+}
+
+.ed-feature-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(28px, 4.4vw, 52px);
+  line-height: 1.05;
+  color: inherit;
+  margin: 0;
+}
+
+.ed-feature-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 18px 0 28px;
+}
+
+.ed-feature-facts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 28px;
+  border-top: 1px solid var(--paper-line);
+  border-bottom: 1px solid var(--paper-line);
+}
+
+.ed-feature-fact {
+  flex: 1 1 160px;
+  padding: 16px 24px 16px 0;
+  border-right: 1px solid var(--paper-line);
+}
+
+.ed-feature-fact:last-child {
+  border-right: none;
+}
+
+.ed-feature-fact dt {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 4px;
+}
+
+.ed-feature-fact dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
+.ed-feature-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ed-feature-section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin: 0 0 10px;
+}
+
+.ed-feature-description {
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.ed-feature-description-empty {
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+.ed-readmore-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  transition: opacity 0.15s ease;
+}
+
+.ed-readmore-btn:hover {
+  opacity: 0.7;
+}
+
+.ed-feature-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ed-feature-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.ed-feature-gallery img,
+.ed-feature-gallery video {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--surface-radius);
+}
+
+@media (max-width: 640px) {
+  .ed-feature-facts {
+    flex-direction: column;
+  }
+
+  .ed-feature-fact {
+    border-right: none;
+    border-bottom: 1px solid var(--paper-line);
+    padding: 14px 0;
+  }
+
+  .ed-feature-fact:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-feature-back {
+    transition: none;
+  }
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+a.tag-chip:hover {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+/* ---------------------------------------------------------------- theme switcher */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.theme-swatch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--surface-radius);
+  background: var(--color-bg-raised);
+  text-align: left;
+}
+
+.theme-swatch:hover {
+  border-color: var(--color-accent);
+}
+
+.theme-swatch-active {
+  border-color: var(--color-accent);
+  border-width: 2px;
+}
+
+.theme-swatch-preview {
+  width: 100%;
+  height: 44px;
+  border-radius: calc(var(--surface-radius) - 3px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--color-line);
+}
+
+.theme-swatch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.theme-swatch-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.theme-swatch-desc {
+  font-size: 11px;
+  color: var(--color-ink-faint);
+}
+
+.theme-swatch-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-ink-soft);
+}
+
+.color-field input[type="color"] {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--color-line);
+  border-radius: calc(var(--surface-radius) - 4px);
+  padding: 2px;
+  background: var(--color-bg);
+}
+
+.color-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* ---------------------------------------------------------------- timeline */
+
+.timeline-tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .timeline-tools-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.timeline-spine {
+  position: relative;
+  padding-left: 26px;
+}
+
+.timeline-spine::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--color-line);
+}
+
+.timeline-era {
+  margin-bottom: 36px;
+  animation: rise 0.4s var(--motion-easing, ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--motion-stagger, 0.04s));
+}
+
+.timeline-era-label {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+.timeline-era-label::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 6px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.timeline-item {
+  position: relative;
+  padding: 9px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -21px;
+  top: 15px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-line-strong, var(--color-ink-faint));
+}
+
+.timeline-item-date {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-ink-faint);
+  white-space: nowrap;
+  width: 74px;
+  flex: none;
+}
+
+.timeline-item-kind {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+  margin-right: 8px;
+}
+
+/* ---------------------------------------------------------------- connections graph */
+
+.connections-canvas {
+  position: relative;
+}
+
+.connections-svg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 900 / 560;
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  border-radius: calc(var(--surface-radius) + 4px);
+  background: var(--color-bg-raised);
+  /* Blocks the browser's own pinch-zoom/scroll/double-tap-zoom gestures on
+     this element so our own pointer-based pan/pinch-zoom handling (see
+     ConnectionsGraph.tsx) is the only thing responding to them. */
+  touch-action: none;
+  cursor: grab;
+}
+
+.connections-svg:active {
+  cursor: grabbing;
+}
+
+.connections-zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.connections-zoom-controls button {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  border-radius: var(--surface-radius);
+  background: var(--color-bg-raised);
+  color: var(--color-ink);
+  font-size: 15px;
+  line-height: 1;
+  box-shadow: var(--surface-shadow);
+}
+
+.connections-zoom-controls button:hover {
+  background: var(--color-bg-sunk);
+}
+
+.connections-zoom-controls button[aria-label="Reset zoom"] {
+  width: auto;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* --color-line is tuned for barely-there card borders elsewhere in the
+   app — too subtle once it's a graph edge instead of a divider, so these
+   read off --color-ink-faint instead for real visibility against the
+   paper background. */
+
+.connections-edge {
+  stroke: var(--color-ink-faint);
+  stroke-width: 1.2;
+  opacity: 0.65;
+}
+
+.connections-edge-strong {
+  stroke: var(--color-accent);
+  stroke-width: 1.6;
+  opacity: 0.8;
+}
+
+/* "Archived" is now the most common edge on the graph — everything
+   auto-connects to you — so it can't be as faint as a one-off accent
+   line without the whole graph reading as empty. */
+.connections-edge-faint {
+  stroke: var(--color-ink-faint);
+  stroke-width: 1;
+  opacity: 0.55;
+  stroke-dasharray: 3 3;
+}
+
+/* A real fact (this event/entry has a placeId) — same weight as
+   .connections-edge but visually distinct so it doesn't read as a
+   person-appearance link. */
+.connections-edge-location {
+  stroke: var(--color-ink-faint);
+  stroke-width: 1.2;
+  opacity: 0.7;
+}
+
+/* Inferred purely from a shared date — deliberately the faintest line on
+   the graph, since it's a coincidence until proven otherwise, but still
+   has to clear a "visible at all" bar. */
+.connections-edge-inferred {
+  stroke: var(--color-ink-faint);
+  stroke-width: 0.9;
+  opacity: 0.4;
+  stroke-dasharray: 1 3;
+}
+
+.node-self {
+  fill: var(--color-accent);
+  stroke: var(--color-bg-raised);
+  stroke-width: 3;
+}
+
+.node-self-ring {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+  opacity: 0.35;
+}
+
+.connections-node {
+  cursor: pointer;
+}
+
+.connections-node:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+.node-person {
+  fill: var(--color-accent);
+  stroke: var(--color-bg-raised);
+  stroke-width: 2;
+  transition: r 0.15s ease;
+}
+
+/* Initial-letter / lock fallback drawn over a person node's circle when
+   there's no avatar (or the person is locked) — paired ink color, same as
+   node-self/node-person's accent fill. */
+.connections-initial {
+  fill: var(--color-accent-ink);
+  font-family: var(--font-display, inherit);
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}
+
+.node-memory {
+  fill: var(--color-bg-raised);
+  stroke: var(--color-ink);
+  stroke-width: 1.75;
+}
+
+.node-journal {
+  fill: var(--mint, #93e2ce);
+  stroke: var(--color-bg-raised);
+  stroke-width: 2.5;
+}
+
+.node-event {
+  fill: var(--yellow, #eec24c);
+  stroke: var(--color-bg-raised);
+  stroke-width: 2.5;
+}
+
+.node-place {
+  fill: var(--color-bg-raised);
+  stroke: var(--color-ink);
+  stroke-width: 1.75;
+  stroke-dasharray: 3 2;
+}
+
+.connections-node:hover .node-person,
+.connections-node:hover .node-memory,
+.connections-node:hover .node-journal,
+.connections-node:hover .node-event,
+.connections-node:hover .node-place {
+  filter: brightness(1.12);
+}
+
+.connections-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  fill: var(--color-ink-soft);
+  pointer-events: none;
+  user-select: none;
+}
+
+.connections-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  color: var(--color-ink-faint);
+}
+
+/* The trailing hint sentence is the last span in this row — without
+   flex-wrap it got crushed down to single-word-per-line width instead of
+   wrapping like a sentence (the bug this fixes). Giving it its own full
+   line keeps it readable at any width. */
+.connections-legend span:last-child {
+  flex-basis: 100%;
+}
+
+.connections-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.connections-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* ---------------------------------------------------------------- theme decoration */
+/* A handful of bespoke touches for the most iconic presets — the token
+   system (color/type/surface/motion) carries the rest of the distinction. */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+}
+
+[data-theme-key="terminal"] body::before,
+[data-theme-key="pixel"] body::before {
+  opacity: 0.05;
+  background: repeating-linear-gradient(
+    to bottom,
+    #fff 0px,
+    #fff 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+[data-theme-key="cyber"] body::before {
+  opacity: 0.5;
+  background-image:
+    linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 75%);
+}
+
+[data-theme-key="archive"] body::before {
+  opacity: 0.35;
+  background-image:
+    radial-gradient(circle, rgba(59, 47, 34, 0.25) 0.5px, transparent 0.5px);
+  background-size: 3px 3px;
+}
+
+/* .ed-shell pages get their own grain texture — same technique as the
+   archive theme above, but keyed off .ed-shell's presence rather than a
+   specific theme, and mixed from the current --color-ink so the dots stay
+   the right way round (dark flecks on a light theme, light flecks on a
+   dark one) instead of a fixed color that could vanish or muddy the
+   background. This rule and the [data-theme-key="archive"] one above have
+   equal specificity; source order (this one last) is what makes this one
+   win when both could apply. */
+body:has(.ed-shell)::before {
+  opacity: 0.3;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-ink) 28%, transparent) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 3px 3px;
+}
+
+[data-theme-key="y2k"] .stat-tile,
+[data-theme-key="y2k"] .theme-swatch-preview {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme-key="y2k"] .stat-tile::after,
+[data-theme-key="y2k"] .theme-swatch-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.5) 45%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme-key="terminal"] .app-nav-mark::after {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------- media upload */
+
+.image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-upload-frame {
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 1;
+  border-radius: var(--surface-radius);
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  background: var(--color-bg-sunk);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-upload-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-upload-empty {
+  font-size: 12px;
+  color: var(--color-ink-faint);
+}
+
+.image-upload-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.multi-file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.multi-file-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: calc(var(--surface-radius) - 2px);
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  background: var(--color-bg-sunk);
+}
+
+.multi-file-item img,
+.multi-file-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.multi-file-doc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-ink-faint);
+}
+
+.multi-file-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- editorial profile layout */
+
+.person-profile,
+.entity-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 36px;
+  margin-top: 8px;
+}
+
+@media (max-width: 760px) {
+  .person-profile,
+  .entity-profile {
+    flex-direction: column;
+    gap: 24px;
+  }
+  .profile-divider {
+    display: none;
+  }
+}
+
+.profile-divider {
+  flex: none;
+  align-self: stretch;
+  width: 1px;
+  background: var(--color-line);
+}
+
+/* Pinned so a short photo stays in view beside a long biography instead of
+   the layout ending in a tall empty gap under it. */
+.person-profile-media {
+  flex: none;
+  width: min(300px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 84px;
+  align-self: flex-start;
+}
+
+@media (max-width: 760px) {
+  .person-profile-media {
+    position: static;
+    width: 100%;
+  }
+}
+
+.person-profile-content,
+.entity-profile-content {
+  flex: 1;
+  min-width: 0;
+  max-width: 62ch;
+}
+
+.person-profile-photo {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--surface-radius);
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  box-shadow: var(--surface-shadow);
+}
+
+.person-profile-photo-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 600;
+  border-style: dashed !important;
+}
+
+.person-profile-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.person-profile-gallery img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: calc(var(--surface-radius) - 3px);
+}
+
+.entity-cover-photo {
+  width: min(300px, 100%);
+  flex: none;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--surface-radius);
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  box-shadow: var(--surface-shadow);
+  position: sticky;
+  top: 84px;
+  align-self: flex-start;
+}
+
+@media (max-width: 760px) {
+  .entity-cover-photo {
+    position: static;
+    width: 100%;
+  }
+}
+
+.record-row-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: calc(var(--surface-radius) - 3px);
+  object-fit: cover;
+  flex: none;
+}
+
+/* Label:value facts — reads cleanly whether there's one fact or five,
+   unlike a card grid which looks sparse/orphaned with few items. */
+.fact-list {
+  display: flex;
+  flex-direction: column;
+  margin: 22px 0 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.fact-row {
+  display: flex;
+  gap: 18px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 14px;
+}
+
+.fact-row dt {
+  flex: none;
+  width: 110px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+  padding-top: 1px;
+}
+
+.fact-row dd {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+/* ---------------------------------------------------------------- modal */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10, 8, 6, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 40px 20px;
+}
+
+.modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  background: var(--color-bg);
+  border: var(--surface-border-width) var(--surface-border-style) var(--color-line);
+  border-radius: calc(var(--surface-radius) + 6px);
+  box-shadow: var(--surface-shadow);
+  padding: 36px 32px;
+  margin: auto;
+}
+
+@media (max-width: 640px) {
+  .modal-panel {
+    padding: 28px 20px;
+  }
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: var(--color-bg-sunk);
+  color: var(--color-ink-soft);
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: var(--color-line);
+  color: var(--color-ink);
+}

@@ -1,0 +1,665 @@
+/* Settings — "creative studio control room". Background, text, lines,
+   and the primary accent all follow the site's active theme (same
+   var(--color-*) re-aliasing trick as .ed-shell in globals.css) — this
+   page previously hardcoded a fixed dark palette, which fought the
+   theme system every other redesigned page already respects. Terracotta
+   stays fixed for destructive actions only, matching the "danger is
+   always this color" convention the rest of the app already uses
+   (.btn-danger), independent of whichever theme is active. Typography
+   stays fixed serif/sans/mono per the original brief — only color was
+   the problem. Plain CSS Module classes, imported directly by every
+   component on this page — no cross-file `composes`, which Turbopack
+   doesn't reliably support (see the ed-shell comment in globals.css).
+
+   NB: these aliases read var(--color-*) but must never be re-declared
+   the other way round (var(--color-accent): var(--accent) etc.) in this
+   same rule — that's the circular-reference trap documented at length
+   on .ed-shell. Don't reintroduce it here. */
+
+.shell {
+  --bg: var(--color-bg);
+  --bg-raised: var(--color-bg-raised);
+  --bg-sunk: var(--color-bg-sunk);
+  --ink: var(--color-ink);
+  --ink-soft: var(--color-ink-soft);
+  --ink-faint: var(--color-ink-faint);
+  --line: var(--color-line);
+  --accent: var(--color-accent);
+  --accent-ink: var(--color-accent-ink);
+  --accent-soft: var(--color-accent-soft);
+  --terracotta: #c1452b;
+  --terracotta-ink: #fff6ea;
+  --terracotta-soft: rgba(193, 69, 43, 0.14);
+  --shadow: var(--surface-shadow);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --font-display: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", "Consolas", "Menlo", monospace;
+
+  display: flex;
+  flex-direction: column;
+  gap: clamp(48px, 6vw, 88px);
+  padding: clamp(24px, 3.4vw, 56px) clamp(20px, 4.2vw, 64px) 80px;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+/* :where() zeroes specificity — see the matching comment on .ed-shell a
+   in globals.css for why. Without it, this (0,1,1) rule can silently beat
+   a component's own single-class color rule (0,1,0) whenever that
+   component renders as a Link, e.g. the Import button was showing base
+   ink text instead of its intended accent-ink. */
+:where(.shell a) {
+  color: inherit;
+}
+
+.shell ::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.hero {
+  max-width: 68ch;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 20px;
+}
+
+.eyebrowDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  flex: none;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(42px, 6vw, 80px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 20px;
+}
+
+.headingMark {
+  color: var(--accent);
+}
+
+.heroDesc {
+  font-size: clamp(15px, 1.1vw, 17px);
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 56ch;
+  margin: 0 0 18px;
+}
+
+.heroFootnote {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------- section head */
+
+.sectionEyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.sectionHeading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(26px, 3vw, 36px);
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.sectionDesc {
+  font-size: 14px;
+  color: var(--ink-soft);
+  max-width: 60ch;
+  margin: 0 0 28px;
+}
+
+/* ---------------------------------------------------------------- account strip */
+
+.accountStrip {
+  display: flex;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.accountItem {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 24px;
+  border-right: 1px solid var(--line);
+}
+
+.accountItem:last-child {
+  border-right: none;
+}
+
+.accountIcon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  color: var(--accent);
+}
+
+.accountLabel {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 4px;
+}
+
+.accountValue {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--accent);
+  border-radius: 3px;
+}
+
+.accountLink:hover {
+  text-decoration: underline;
+}
+
+/* Same var(--color-accent) the global a:focus-visible rule already uses —
+   just made explicit here so it's not relying on a rule defined
+   elsewhere for a control this central to the page. */
+.accountLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- import */
+/* Same pill-button recipe as .activateBtn — this page has its own button
+   language (pill radius, mono uppercase, accent/accent-ink) distinct from
+   the app-wide .btn/.btn-primary, and the Import link should follow it
+   rather than the generic default. */
+
+.importLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 70%, var(--ink));
+  border-radius: 999px;
+  padding: 13px 22px;
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), opacity 0.15s ease;
+}
+
+.importLink:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.importLink:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .importLink {
+    transition: none;
+  }
+
+  .importLink:hover {
+    transform: none;
+  }
+}
+
+/* -------------------------------------------------------------- atmospheres */
+
+.themeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.themeCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-align: left;
+  transition: transform 0.18s var(--ease), border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+.themeCard:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.themeCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.themeCardActive {
+  border-color: var(--accent);
+  box-shadow: var(--shadow), 0 0 0 1px var(--accent);
+}
+
+.themeCardActive:hover {
+  transform: none;
+}
+
+.themePreview {
+  height: 56px;
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.themeDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.themeName {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.themeCheck {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .themeCard {
+    transition: none;
+  }
+
+  .themeCard:hover {
+    transform: none;
+  }
+}
+
+/* -------------------------------------------------------- custom theme form */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.swatchGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .swatchGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.swatchField {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.swatchInput {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+}
+
+/* Chrome/Firefox both add their own inner border/padding to
+   input[type=color] — strip it so the swatch reads as a clean circle. */
+.swatchInput::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: 999px;
+}
+
+.swatchInput::-webkit-color-swatch {
+  border: none;
+  border-radius: 999px;
+}
+
+.swatchInput::-moz-color-swatch {
+  border: none;
+  border-radius: 999px;
+}
+
+.swatchLabel {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 560px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.field select,
+.field input[type="text"] {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.field select:focus-visible,
+.field input[type="text"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.activateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 70%, var(--ink));
+  border-radius: 999px;
+  padding: 13px 22px;
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), opacity 0.15s ease;
+}
+
+.activateBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -16px rgba(77, 141, 255, 0.5);
+}
+
+.activateBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+.activateBtn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.successNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.errorNote {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--terracotta);
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activateBtn {
+    transition: none;
+  }
+
+  .activateBtn:hover {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- danger zone */
+
+.dangerZone {
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+}
+
+.dangerBox {
+  padding: 28px clamp(20px, 3vw, 32px);
+  background: var(--terracotta-soft);
+  border: 1px solid color-mix(in srgb, var(--terracotta) 35%, var(--line));
+  border-radius: 10px;
+}
+
+.dangerHeading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--terracotta-ink);
+  margin: 0 0 10px;
+}
+
+.dangerCopy {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 60ch;
+  margin: 0 0 20px;
+}
+
+.dangerTrigger {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--terracotta-ink);
+  background: var(--terracotta);
+  border: 1.5px solid color-mix(in srgb, var(--terracotta) 70%, var(--ink));
+  border-radius: 999px;
+  padding: 11px 20px;
+}
+
+.dangerTrigger:hover {
+  opacity: 0.9;
+}
+
+.dangerTrigger:focus-visible,
+.dangerConfirm:focus-visible,
+.dangerCancel:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.dangerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 420px;
+}
+
+.dangerForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.dangerForm input {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.dangerForm input:focus-visible {
+  outline: 2px solid var(--terracotta);
+  outline-offset: 1px;
+}
+
+.dangerActions {
+  display: flex;
+  gap: 10px;
+}
+
+.dangerConfirm {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--terracotta-ink);
+  background: var(--terracotta);
+  border: 1.5px solid color-mix(in srgb, var(--terracotta) 70%, var(--ink));
+  border-radius: 999px;
+  padding: 11px 20px;
+}
+
+.dangerConfirm:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.dangerCancel {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 11px 20px;
+}
+
+.dangerCancel:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}

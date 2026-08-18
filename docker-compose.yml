@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-life_archive}
+    # Bound to localhost only — this default password is fine for a local
+    # dev DB reachable solely from the host, but would not be if this port
+    # were ever published on a non-loopback interface.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - archive_db_data:/var/lib/postgresql/data
+
+volumes:
+  archive_db_data:

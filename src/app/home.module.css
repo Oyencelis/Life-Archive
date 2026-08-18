@@ -1,0 +1,548 @@
+/* Homepage-specific layout. Shared editorial primitives (theme-aware
+   color bridge, headline type, tone pairings, ctas) are plain global
+   classes in globals.css ("ed-*") — see the comment there for why this
+   isn't done via cross-file CSS Modules `composes`. This file holds only
+   what's local to the homepage. */
+
+/* ---------------------------------------------------------------- hero */
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: clamp(28px, 4vw, 56px);
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+.heroLeft {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.emptyCta {
+  align-self: flex-start;
+  border-radius: 999px;
+  margin-bottom: 28px;
+}
+
+/* ---------------------------------------------------------- note card */
+
+.noteWrap {
+  position: relative;
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 30px;
+  max-width: 340px;
+}
+
+/* The "peeking shadow" layer now lives here (painted first, so .noteCard
+   — a later sibling — naturally paints over it), not as .noteCard::before
+   with z-index:-1. That looked right in most themes but was a real bug:
+   per the CSS painting-order spec, a negative-z-index child paints AFTER
+   its stacking-context root's own background, not behind it — only
+   before the root's in-flow content. So the "shadow" was actually
+   painting on top of .noteCard's own background the whole time, just
+   under the text. Harmless when the shadow color was close to the card's
+   background; glaringly unreadable in themes (like Pixel) where the
+   accent color is nothing like the card background. */
+.noteWrap::before {
+  content: "";
+  position: absolute;
+  inset: 30px 0 0 0;
+  background: var(--terracotta);
+  border-radius: 3px;
+  transform: translate(7px, 8px) rotate(2deg);
+}
+
+.noteLabel {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  transform: rotate(-4deg);
+}
+
+.noteCard {
+  position: relative;
+  margin: 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--paper-line);
+  border-radius: 3px;
+  padding: 22px 24px 20px;
+  transform: rotate(-2.5deg);
+  box-shadow: var(--shadow-soft);
+}
+
+.noteQuote {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.noteAttr {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ------------------------------------------------------------ field note */
+
+.fieldNote {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: clamp(360px, 42vw, 520px);
+  padding: clamp(24px, 2.6vw, 36px);
+  background: var(--terracotta);
+  color: var(--terracotta-ink);
+  border-radius: 6px;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+
+.fieldNote:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-pop);
+}
+
+.fieldNote:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.fieldNoteTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fieldNoteLabel {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fieldNoteTop svg {
+  transition: transform 0.25s var(--ease);
+}
+
+.fieldNote:hover .fieldNoteTop svg {
+  transform: translate(2px, -2px);
+}
+
+.fieldNoteBody {
+  margin: 28px 0;
+}
+
+.fieldNoteKicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 14px;
+  color: inherit;
+}
+
+.fieldNoteHeadline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(30px, 3.6vw, 46px);
+  line-height: 1.08;
+  margin: 0;
+  color: inherit;
+}
+
+/* Was a fixed --mint color — with 11 very different theme accent hues
+   behind it (this sits on .fieldNote's accent-colored background), a
+   single fixed color can't reliably contrast against all of them (some
+   pairs measured under 2:1). Weight, not a second color, is what
+   actually stays legible in every theme. */
+.mintWord {
+  font-weight: 800;
+}
+
+.fieldNoteFoot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(251, 240, 226, 0.28);
+}
+
+.fieldNoteFoot p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  max-width: 34ch;
+  color: inherit;
+}
+
+.fieldNoteEst {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------- stat row */
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(10px, 1.4vw, 18px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 760px) {
+  .statRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.statTile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 20px 18px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------- mosaic */
+
+.mosaicHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.mosaicTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(26px, 2.6vw, 38px);
+  margin: 6px 0 0;
+  color: var(--ink);
+}
+
+.mosaicMeta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 6px;
+}
+
+.mosaicGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 128px;
+  gap: 10px;
+}
+
+.mosaicGrid .mosaicItem:first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+@media (max-width: 760px) {
+  .mosaicGrid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 120px;
+  }
+}
+
+.mosaicItem {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--paper-line);
+}
+
+.mosaicImg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 0.5s var(--ease);
+}
+
+.mosaicItem:hover .mosaicImg,
+.mosaicItem:focus-visible .mosaicImg {
+  transform: scale(1.06);
+}
+
+.mosaicItem:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.mosaicCaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 10px 12px 9px;
+  background: linear-gradient(to top, rgba(20, 14, 8, 0.85), transparent);
+}
+
+.mosaicCaptionLabel {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #fff6ea;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mosaicCaptionMeta {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 246, 234, 0.75);
+}
+
+/* ------------------------------------------------------------- on this day */
+
+.onThisDay {
+  border-top: 1px solid var(--paper-line);
+  padding-top: 28px;
+}
+
+.onThisDayList {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.onThisDayList li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--paper-line);
+}
+
+.onThisDayList a {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  transition: color 0.15s ease;
+}
+
+.onThisDayList a:hover {
+  color: var(--terracotta);
+}
+
+.onThisDayList span {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- drawers */
+
+.drawersSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.drawersHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.drawersTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(30px, 3vw, 46px);
+  margin: 0;
+  color: var(--ink);
+}
+
+.drawersMeta {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 6px;
+}
+
+@media (max-width: 640px) {
+  .drawersHead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+.drawersGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(10px, 1.4vw, 18px);
+}
+
+@media (max-width: 980px) {
+  .drawersGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .drawersGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.drawer {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: clamp(260px, 22vw, 340px);
+  padding: 22px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+
+.drawer:hover,
+.drawer:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-soft);
+}
+
+.drawer:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.drawerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.drawerN {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+}
+
+.drawer h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 26px;
+  margin: 0 0 6px;
+  color: inherit;
+}
+
+.drawer p {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+  color: inherit;
+}
+
+/* -------------------------------------------------------------- prompt */
+
+.prompt {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-top: 32px;
+  border-top: 1px solid var(--paper-line);
+}
+
+.promptTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(22px, 2.4vw, 32px);
+  margin: 8px 0 0;
+  max-width: 32ch;
+  color: var(--ink);
+}
+
+.surprise {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fieldNote,
+  .drawer,
+  .emptyCta,
+  .fieldNoteTop svg,
+  .mosaicImg {
+    transition: none;
+  }
+
+  .fieldNote:hover,
+  .drawer:hover,
+  .emptyCta:hover,
+  .mosaicItem:hover .mosaicImg {
+    transform: none;
+  }
+}

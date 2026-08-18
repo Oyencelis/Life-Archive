@@ -1,0 +1,526 @@
+// Personal Life Archive — data model
+// Every root entity is scoped to a user from day one so multi-tenant
+// support later is an auth change, not a migration. See blueprint §2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String?
+  activeThemeId String?
+  activeTheme   Theme?   @relation("ActiveTheme", fields: [activeThemeId], references: [id])
+  // Hash of the PIN gating entries marked isLocked (JournalEntry, Writing).
+  // Null means the sensitive-content lock isn't set up yet.
+  lockPinHash   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  people         Person[]
+  memories       Memory[]
+  journalEntries JournalEntry[]
+  media          Media[]
+  places         Place[]
+  events         Event[]
+  projects       Project[]
+  interests      Interest[]
+  goals          Goal[]
+  writings       Writing[]
+  reflections    Reflection[]
+  eras           Era[]
+  tags           Tag[]
+  themes         Theme[]         @relation("OwnedThemes")
+  authEvents     AuthEvent[]
+  timelineEvents TimelineEvent[]
+  embeddings     Embedding[]
+}
+
+model AuthEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // login | logout | export | delete_account
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Presentation
+// ---------------------------------------------------------------------------
+
+model Theme {
+  id        String   @id @default(cuid())
+  key       String // slug, e.g. "minimal", "cyber", or a generated id for custom themes
+  name      String
+  isPreset  Boolean  @default(false)
+  userId    String? // null for shipped presets
+  user      User?    @relation("OwnedThemes", fields: [userId], references: [id], onDelete: Cascade)
+  tokens    Json // color / type / surface / motion / decorative token bundle — see blueprint §4
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activeFor User[] @relation("ActiveTheme")
+
+  @@unique([userId, key])
+}
+
+// ---------------------------------------------------------------------------
+// Who / where / when
+// ---------------------------------------------------------------------------
+
+enum RelationshipStatus {
+  CURRENT
+  PAST
+  LOST_CONTACT
+  COMPLICATED
+  OCCASIONAL
+  FAMILY
+  OTHER
+}
+
+model Person {
+  id                 String              @id @default(cuid())
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  nickname           String?
+  category           String // family | friend | classmate | colleague | romantic | acquaintance | mentor | custom...
+  relationshipStatus RelationshipStatus?
+  dob                DateTime?
+  firstMetDate       DateTime?
+  firstMetPlaceId    String?
+  firstMetPlace      Place?              @relation("FirstMetAt", fields: [firstMetPlaceId], references: [id])
+  howWeMet           String?
+  bio                String?
+  notes              String?
+  avatarMediaId      String?
+  avatarMedia        Media?              @relation("PersonAvatar", fields: [avatarMediaId], references: [id])
+  isSelf             Boolean             @default(false)
+  // Gated behind the user's lockPinHash on read — see src/lib/auth-lock.ts.
+  isLocked           Boolean             @default(false)
+  archivedAt         DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  relationshipsFrom PersonRelationship[] @relation("RelationshipFrom")
+  relationshipsTo   PersonRelationship[] @relation("RelationshipTo")
+  entityAppearances EntityPerson[]
+
+  @@index([userId, category])
+}
+
+model PersonRelationship {
+  id               String   @id @default(cuid())
+  personId         String
+  person           Person   @relation("RelationshipFrom", fields: [personId], references: [id], onDelete: Cascade)
+  relatedPersonId  String
+  relatedPerson    Person   @relation("RelationshipTo", fields: [relatedPersonId], references: [id], onDelete: Cascade)
+  relationshipType String
+  createdAt        DateTime @default(now())
+
+  @@unique([personId, relatedPersonId, relationshipType])
+}
+
+model Place {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  lat         Float?
+  lng         Float?
+  category    String?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  firstMetHere   Person[]       @relation("FirstMetAt")
+  events         Event[]
+  journalEntries JournalEntry[]
+
+  @@index([userId, category])
+}
+
+model Era {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  startDate DateTime?
+  endDate   DateTime?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  memories       Memory[]
+  timelineEvents TimelineEvent[]
+  events         Event[]
+
+  @@index([userId, sortOrder])
+}
+
+model TimelineEvent {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eraId      String?
+  era        Era?     @relation(fields: [eraId], references: [id])
+  sourceType String // memory | event | journal_entry | project | milestone
+  sourceId   String
+  date       DateTime
+  headline   String
+  createdAt  DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+enum EventCategory {
+  BIRTHDAY
+  GRADUATION
+  TRIP
+  SCHOOL
+  FAMILY
+  MILESTONE
+  FIRST_MEETING
+  ANNIVERSARY
+  OTHER
+}
+
+model Event {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  date        DateTime?
+  placeId     String?
+  place       Place?        @relation(fields: [placeId], references: [id])
+  // Explicit override for the timeline's date-range era matching — needed
+  // since a single event can fall within more than one era's date range
+  // (e.g. a trip during an overlap between "College" and "Gap year").
+  eraId       String?
+  era         Era?          @relation(fields: [eraId], references: [id])
+  category    EventCategory @default(OTHER)
+  archivedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId, date])
+}
+
+// ---------------------------------------------------------------------------
+// What happened
+// ---------------------------------------------------------------------------
+
+enum DatePrecision {
+  EXACT
+  APPROXIMATE
+  ERA_ONLY
+}
+
+model Memory {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  date          DateTime?
+  datePrecision DatePrecision @default(EXACT)
+  eraId         String?
+  era           Era?          @relation(fields: [eraId], references: [id])
+  mood          String?
+  importance    Int?          @default(3) // 1-5
+  archivedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId, date])
+}
+
+// PRIVATE is gated behind the user's lockPinHash on read (see
+// src/lib/auth-lock.ts) — it's not just a display label, selecting it
+// requires a PIN to already be set.
+enum Visibility {
+  PRIVATE
+  PUBLIC
+}
+
+model JournalEntry {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurredAt DateTime   @default(now())
+  title      String?
+  content    String
+  mood       String?
+  visibility Visibility @default(PRIVATE)
+  placeId    String?
+  place      Place?     @relation(fields: [placeId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([userId, occurredAt])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+model Media {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageKey String
+  type       MediaType
+  width      Int?
+  height     Int?
+  duration   Int? // seconds, for video/audio
+  capturedAt DateTime?
+  altText    String?
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  avatarFor Person[]    @relation("PersonAvatar")
+  links     MediaLink[]
+
+  @@index([userId, type])
+}
+
+model MediaLink {
+  id         String   @id @default(cuid())
+  mediaId    String
+  media      Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  entityType String // person | memory | journal | place | event | project
+  entityId   String
+  role       String   @default("gallery") // cover | gallery | attachment
+  createdAt  DateTime @default(now())
+
+  @@unique([mediaId, entityType, entityId, role])
+  @@index([entityType, entityId])
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  ABANDONED
+  FAILED
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  goal         String?
+  status       ProjectStatus @default(ACTIVE)
+  startDate    DateTime?
+  endDate      DateTime?
+  whatILearned String?
+  whyItEnded   String?
+  websiteUrl   String?
+  archivedAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId, status])
+}
+
+// ---------------------------------------------------------------------------
+// What I made of it
+// ---------------------------------------------------------------------------
+
+enum InterestStatus {
+  CURRENT
+  PAST
+}
+
+model Interest {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  category        String?
+  status          InterestStatus @default(CURRENT)
+  firstDiscovered DateTime?
+  lastActive      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId, status])
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  ABANDONED
+  REPLACED
+}
+
+model Goal {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  category    String?
+  status      GoalStatus @default(ACTIVE)
+  startDate   DateTime?
+  targetDate  DateTime?
+  progress    Int?       @default(0) // 0-100 — current snapshot; history lives in checkIns
+  reflection  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  checkIns GoalCheckIn[]
+
+  @@index([userId, status])
+}
+
+// One row per progress update — lets a goal's trajectory be shown over
+// time instead of just the current snapshot on Goal.progress.
+model GoalCheckIn {
+  id        String   @id @default(cuid())
+  goalId    String
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  progress  Int // 0-100
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([goalId, createdAt])
+}
+
+enum WritingType {
+  ESSAY
+  QUOTE
+  POEM
+  LETTER
+  UNSENT
+  STORY
+  THOUGHT
+}
+
+model Writing {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       WritingType
+  title      String?
+  content    String
+  writtenAt  DateTime?
+  visibility Visibility  @default(PUBLIC)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([userId, type])
+}
+
+// Reflections are append-only: editing never overwrites, it adds a version.
+model Reflection {
+  id               String              @id @default(cuid())
+  userId           String
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject          String
+  currentVersionId String?             @unique
+  currentVersion   ReflectionVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions         ReflectionVersion[] @relation("VersionsOf")
+  createdAt        DateTime            @default(now())
+
+  @@index([userId])
+}
+
+model ReflectionVersion {
+  id           String     @id @default(cuid())
+  reflectionId String
+  reflection   Reflection @relation("VersionsOf", fields: [reflectionId], references: [id], onDelete: Cascade)
+  content      String
+  authorAge    Int?
+  writtenAt    DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+
+  isCurrentOf Reflection? @relation("CurrentVersion")
+
+  @@index([reflectionId, writtenAt])
+}
+
+// ---------------------------------------------------------------------------
+// Connective tissue
+// ---------------------------------------------------------------------------
+
+model Tag {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  category  String?
+  createdAt DateTime @default(now())
+
+  entityTags EntityTag[]
+
+  @@unique([userId, label])
+}
+
+model EntityTag {
+  id         String   @id @default(cuid())
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  entityType String // memory | journal_entry | person | place | event | project | interest | goal | writing
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  @@unique([tagId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+// Generic person <-> any-entity link (a memory's people, an event's people, ...)
+model EntityPerson {
+  id         String   @id @default(cuid())
+  personId   String
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  entityType String // memory | journal | event | project
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  @@unique([personId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+// One embedding per (entityType, entityId), covering memory | journal | writing.
+// `vector` is Unsupported because Prisma Client has no native pgvector type —
+// all reads/writes go through $queryRaw/$executeRaw in src/lib/ai/embeddings.ts.
+// 768 dims matches Gemini's text-embedding-004.
+model Embedding {
+  id         String                     @id @default(cuid())
+  userId     String
+  user       User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String
+  content    String
+  vector     Unsupported("vector(768)")
+  createdAt  DateTime                   @default(now())
+  updatedAt  DateTime                   @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([userId])
+}
